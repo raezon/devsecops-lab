@@ -184,107 +184,111 @@ pipeline {
     }
 
     post {
-        success {
-            echo '✅ Pipeline terminé — déploiement autorisé !'
-            emailext(
-                to:       'amardjebabla10@gmail.com',
-                from:     'onboarding@resend.dev',
-                subject:  "✅ [${env.JOB_NAME}] Build #${env.BUILD_NUMBER} — Quality Gate OK",
-                mimeType: 'text/html',
-                body:     """
-<html><body style="font-family:Arial,sans-serif;color:#1e293b;">
+        always {
+            script {
+                def isOk    = currentBuild.result == null || currentBuild.result == 'SUCCESS'
+                def summary = env.SECURITY_SUMMARY ?: 'Pipeline échoué avant la Quality Gate — consulte les logs.'
+                def color   = isOk ? '#1A2B4A' : '#DC2626'
+                def subColor= isOk ? '#93C5FD' : '#FCA5A5'
+                def border  = isOk ? '#2563EB' : '#DC2626'
+                def status  = isOk ? '✅ Déploiement autorisé' : '🚫 Déploiement BLOQUÉ'
+                def subject = isOk
+                    ? "✅ [${env.JOB_NAME}] Build #${env.BUILD_NUMBER} — Quality Gate OK"
+                    : "🚫 [${env.JOB_NAME}] Build #${env.BUILD_NUMBER} — DÉPLOIEMENT BLOQUÉ"
 
-<table width="100%" style="background:#1A2B4A;padding:24px;">
-  <tr><td>
-    <h1 style="color:white;margin:0;">✅ Déploiement autorisé</h1>
-    <p style="color:#93C5FD;margin:4px 0 0;">${env.JOB_NAME} — Build #${env.BUILD_NUMBER}</p>
-  </td></tr>
-</table>
+                emailext(
+                    to:       'amardjebabla10@gmail.com',
+                    from:     'onboarding@resend.dev',
+                    subject:  subject,
+                    mimeType: 'text/html',
+                    body:     """
+<html>
+<body style="font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0;">
 
-<table width="100%" style="padding:16px;">
-  <tr>
-    <td style="padding:4px;"><b>Pipeline</b></td><td>${env.JOB_NAME}</td>
-    <td style="padding:4px;"><b>Build</b></td><td>#${env.BUILD_NUMBER}</td>
-  </tr>
-  <tr>
-    <td style="padding:4px;"><b>Commit</b></td><td>${env.GIT_COMMIT}</td>
-    <td style="padding:4px;"><b>Branch</b></td><td>${env.GIT_BRANCH}</td>
-  </tr>
-</table>
+  <!-- HEADER -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${color};padding:28px 24px;">
+    <tr><td>
+      <h1 style="color:white;margin:0;font-size:22px;">${status}</h1>
+      <p style="color:${subColor};margin:6px 0 0;font-size:14px;">${env.JOB_NAME} — Build #${env.BUILD_NUMBER}</p>
+    </td></tr>
+  </table>
 
-<table width="100%" style="background:#F1F5F9;padding:16px;border-left:4px solid #2563EB;">
-  <tr><td>
-    <h3 style="color:#1A2B4A;margin:0 0 12px;">🔎 Résultats Sécurité</h3>
-    <pre style="font-size:13px;white-space:pre-wrap;">${env.SECURITY_SUMMARY}</pre>
-  </td></tr>
-</table>
+  <!-- BUILD INFO -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:16px 24px;border-bottom:1px solid #E2E8F0;">
+    <tr>
+      <td style="padding:6px 12px 6px 0;width:120px;color:#6B7280;font-size:13px;"><b>Pipeline</b></td>
+      <td style="padding:6px;font-size:13px;">${env.JOB_NAME}</td>
+      <td style="padding:6px 12px 6px 24px;width:120px;color:#6B7280;font-size:13px;"><b>Build</b></td>
+      <td style="padding:6px;font-size:13px;">#${env.BUILD_NUMBER}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 12px 6px 0;color:#6B7280;font-size:13px;"><b>Commit</b></td>
+      <td style="padding:6px;font-size:13px;font-family:monospace;">${env.GIT_COMMIT ?: 'N/A'}</td>
+      <td style="padding:6px 12px 6px 24px;color:#6B7280;font-size:13px;"><b>Branch</b></td>
+      <td style="padding:6px;font-size:13px;">${env.GIT_BRANCH ?: 'N/A'}</td>
+    </tr>
+  </table>
 
-<table width="100%" style="padding:16px;">
-  <tr>
-    <td><a href="${env.BUILD_URL}" style="background:#2563EB;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">🔗 Voir le Build</a></td>
-    <td><a href="${env.BUILD_URL}artifact/" style="background:#0D9488;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">📦 Voir les Rapports</a></td>
-    <td><a href="${env.BUILD_URL}ZAP_20Security_20Report/" style="background:#EA580C;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">🚨 Rapport ZAP</a></td>
-  </tr>
-</table>
+  <!-- SECURITY RESULTS -->
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="margin:16px 0;background:#F8FAFC;border-left:4px solid ${border};padding:16px 20px;">
+    <tr><td>
+      <h3 style="color:#1A2B4A;margin:0 0 12px;font-size:15px;">🔎 Résultats Sécurité</h3>
+      <pre style="font-size:12px;white-space:pre-wrap;margin:0;color:#1e293b;line-height:1.6;">${summary}</pre>
+    </td></tr>
+  </table>
 
-</body></html>
+  <!-- ACTION REQUIRED (failure only) -->
+  ${isOk ? '' : """
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="margin:12px 0;background:#FFF7ED;border-left:4px solid #EA580C;padding:16px 20px;">
+    <tr><td>
+      <h3 style="color:#EA580C;margin:0 0 6px;font-size:15px;">⚡ Action requise</h3>
+      <p style="margin:0;font-size:13px;">Corriger les vulnérabilités listées ci-dessus avant de relancer le pipeline.</p>
+    </td></tr>
+  </table>
+  """}
+
+  <!-- BUTTONS -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:16px 24px 24px;">
+    <tr>
+      <td style="padding-right:8px;">
+        <a href="${env.BUILD_URL}console"
+           style="display:inline-block;background:#1A2B4A;color:white;padding:10px 18px;
+                  text-decoration:none;border-radius:4px;font-size:13px;">
+          📋 Logs Jenkins
+        </a>
+      </td>
+      <td style="padding-right:8px;">
+        <a href="${env.BUILD_URL}artifact/"
+           style="display:inline-block;background:#0D9488;color:white;padding:10px 18px;
+                  text-decoration:none;border-radius:4px;font-size:13px;">
+          📦 Rapports
+        </a>
+      </td>
+      <td>
+        <a href="${env.BUILD_URL}ZAP_20Security_20Report/"
+           style="display:inline-block;background:#EA580C;color:white;padding:10px 18px;
+                  text-decoration:none;border-radius:4px;font-size:13px;">
+          🚨 Rapport ZAP
+        </a>
+      </td>
+    </tr>
+  </table>
+
+  <!-- FOOTER -->
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="background:#F1F5F9;padding:12px 24px;border-top:1px solid #E2E8F0;">
+    <tr><td style="font-size:11px;color:#94A3B8;text-align:center;">
+      DevSecOps Pipeline — Jenkins CI/CD — ${new Date().format('dd/MM/yyyy HH:mm')}
+    </td></tr>
+  </table>
+
+</body>
+</html>
 """
-            )
-        }
-
-        failure {
-            echo '❌ Pipeline échoué — déploiement BLOQUÉ.'
-            emailext(
-                to:       'amardjebabla10@gmail.com',
-                from:     'onboarding@resend.dev',
-                subject:  "🚫 [${env.JOB_NAME}] Build #${env.BUILD_NUMBER} — DÉPLOIEMENT BLOQUÉ",
-                mimeType: 'text/html',
-                body:     """
-<html><body style="font-family:Arial,sans-serif;color:#1e293b;">
-
-<table width="100%" style="background:#DC2626;padding:24px;">
-  <tr><td>
-    <h1 style="color:white;margin:0;">🚫 Déploiement BLOQUÉ</h1>
-    <p style="color:#FCA5A5;margin:4px 0 0;">${env.JOB_NAME} — Build #${env.BUILD_NUMBER}</p>
-  </td></tr>
-</table>
-
-<table width="100%" style="padding:16px;">
-  <tr>
-    <td style="padding:4px;"><b>Pipeline</b></td><td>${env.JOB_NAME}</td>
-    <td style="padding:4px;"><b>Build</b></td><td>#${env.BUILD_NUMBER}</td>
-  </tr>
-  <tr>
-    <td style="padding:4px;"><b>Commit</b></td><td>${env.GIT_COMMIT}</td>
-    <td style="padding:4px;"><b>Branch</b></td><td>${env.GIT_BRANCH}</td>
-  </tr>
-</table>
-
-<table width="100%" style="background:#FFF1F2;padding:16px;border-left:4px solid #DC2626;">
-  <tr><td>
-    <h3 style="color:#DC2626;margin:0 0 12px;">🔎 Résultats Sécurité</h3>
-    <pre style="font-size:13px;white-space:pre-wrap;">${env.SECURITY_SUMMARY ?: 'Non disponible.'}</pre>
-  </td></tr>
-</table>
-
-<table width="100%" style="background:#FFF7ED;padding:16px;border-left:4px solid #EA580C;margin-top:12px;">
-  <tr><td>
-    <h3 style="color:#EA580C;margin:0 0 8px;">⚡ Action requise</h3>
-    <p style="margin:0;">Corriger les vulnérabilités listées ci-dessus avant de relancer le pipeline.</p>
-  </td></tr>
-</table>
-
-<table width="100%" style="padding:16px;">
-  <tr>
-    <td><a href="${env.BUILD_URL}console" style="background:#DC2626;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">📋 Voir les Logs</a></td>
-    <td><a href="${env.BUILD_URL}artifact/" style="background:#0D9488;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">📦 Voir les Rapports</a></td>
-    <td><a href="${env.BUILD_URL}ZAP_20Security_20Report/" style="background:#EA580C;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">🚨 Rapport ZAP</a></td>
-  </tr>
-</table>
-
-</body></html>
-"""
-            )
+                )
+            }
         }
     }
 }

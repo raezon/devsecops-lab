@@ -67,24 +67,23 @@ pipeline {
             steps {
                 echo '🚨 Lancement du pentest dynamique avec OWASP ZAP...'
 
-                // Démarrer l'application cible
                 sh '''
                     docker run -d \
-                      --name target-app \
-                      --network ${DOCKER_NET} \
-                      -p ${APP_PORT}:5000 \
-                      devsecops-app:latest
+                    --name target-app \
+                    --network ${DOCKER_NET} \
+                    -p ${APP_PORT}:5000 \
+                    devsecops-app:latest
                     sleep 5
                 '''
 
-                // Lancer ZAP baseline scan
                 sh '''
                     docker run --rm \
-                      --network ${DOCKER_NET} \
-                      -p ${ZAP_PORT}:8090 \
-                      -v $(pwd):/zap/wrk \
-                      ghcr.io/zaproxy/zaproxy:stable \
-                      zap-baseline.py \
+                    --user root \
+                    --network ${DOCKER_NET} \
+                    -p ${ZAP_PORT}:8090 \
+                    -v $(pwd):/zap/wrk:rw \
+                    ghcr.io/zaproxy/zaproxy:stable \
+                    zap-baseline.py \
                         -t http://target-app:5000 \
                         -r zap-report.html \
                         -J zap-report.json \
@@ -102,7 +101,7 @@ pipeline {
                         reportName:   'ZAP Security Report'
                     ])
                     archiveArtifacts artifacts: 'zap-report.json',
-                                     allowEmptyArchive: true
+                                    allowEmptyArchive: true
                 }
             }
         }

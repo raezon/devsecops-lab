@@ -127,57 +127,55 @@ pipeline {
                 script {
                     echo '🔎 Vérification des seuils de sécurité...'
 
-                    // ── Vérification Bandit ──
-                    def banditOk = true
-                    if (fileExists('bandit-report.json')) {
-                        def bandit = readJSON file: 'bandit-report.json'
+                    def result = sh(
+                        script: '''
+                            python3 - <<'EOF'
+        import json, sys, os
 
-                        def highCount   = bandit.metrics['_totals']['SEVERITY.HIGH']   ?: 0
-                        def mediumCount = bandit.metrics['_totals']['SEVERITY.MEDIUM'] ?: 0
+        issues = []
 
-                        echo "Bandit — HIGH: ${highCount}  MEDIUM: ${mediumCount}"
+        # ── Bandit ──
+        if os.path.exists('bandit-report.json'):
+            with open('bandit-report.json') as f:
+                d = json.load(f)
+            totals  = d.get('metrics', {}).get('_totals', {})
+            high    = int(totals.get('SEVERITY.HIGH',   0))
+            medium  = int(totals.get('SEVERITY.MEDIUM', 0))
+            print(f"Bandit — HIGH: {high}  MEDIUM: {medium}")
+            if high > 0 or medium > 1:
+                issues.append(f"BANDIT BLOQUE (HIGH={high}, MEDIUM={medium})")
+            else:
+                print("OK Bandit")
+        else:
+            print("WARN bandit-report.json introuvable")
 
-                        if (highCount > 0 || mediumCount > 1) {
-                            echo "❌ BANDIT : seuil dépassé (HIGH=${highCount}, MEDIUM=${mediumCount})"
-                            banditOk = false
-                        } else {
-                            echo "✅ BANDIT : seuil respecté"
-                        }
-                    } else {
-                        echo "⚠️ bandit-report.json introuvable — skip"
-                    }
+        # ── ZAP ──
+        if os.path.exists('zap-report.json'):
+            with open('zap-report.json') as f:
+                d = json.load(f)
+            high   = sum(1 for s in d.get('site',[]) for a in s.get('alerts',[]) if int(a.get('riskcode',0)) == 3)
+            medium = sum(1 for s in d.get('site',[]) for a in s.get('alerts',[]) if int(a.get('riskcode',0)) == 2)
+            print(f"ZAP — HIGH: {high}  MEDIUM: {medium}")
+            if high > 0 or medium > 1:
+                issues.append(f"ZAP BLOQUE (HIGH={high}, MEDIUM={medium})")
+            else:
+                print("OK ZAP")
+        else:
+            print("WARN zap-report.json introuvable")
 
-                    // ── Vérification ZAP ──
-                    def zapOk = true
-                    if (fileExists('zap-report.json')) {
-                        def zap = readJSON file: 'zap-report.json'
+        if issues:
+            print("GATE_FAIL: " + " | ".join(issues))
+            sys.exit(1)
+        else:
+            print("GATE_PASS")
+            sys.exit(0)
+        EOF
+                        ''',
+                        returnStatus: true
+                    )
 
-                        def zapHigh   = 0
-                        def zapMedium = 0
-
-                        zap.site.each { site ->
-                            site.alerts.each { alert ->
-                                def risk = alert.riskcode as Integer
-                                if (risk == 3) zapHigh++
-                                if (risk == 2) zapMedium++
-                            }
-                        }
-
-                        echo "ZAP — HIGH: ${zapHigh}  MEDIUM: ${zapMedium}"
-
-                        if (zapHigh > 0 || zapMedium > 1) {
-                            echo "❌ ZAP : seuil dépassé (HIGH=${zapHigh}, MEDIUM=${zapMedium})"
-                            zapOk = false
-                        } else {
-                            echo "✅ ZAP : seuil respecté"
-                        }
-                    } else {
-                        echo "⚠️ zap-report.json introuvable — skip"
-                    }
-
-                    // ── Décision finale ──
-                    if (!banditOk || !zapOk) {
-                        error("🚫 DÉPLOIEMENT BLOQUÉ — Vulnérabilités MEDIUM > 1 ou HIGH détectées !")
+                    if (result != 0) {
+                        error("🚫 DÉPLOIEMENT BLOQUÉ — Vulnérabilités détectées ! Consulte les rapports.")
                     } else {
                         echo "🚀 Quality Gate passée — déploiement autorisé !"
                     }

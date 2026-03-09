@@ -22,3 +22,6 @@ credentials:latest
 ssh-credentials:latest
 timestamper:latest
 ansicolor:latest
+
+# Pipeline Utility Steps (readJSON, readYaml, readCSV...)
+pipeline-utility-steps:latest

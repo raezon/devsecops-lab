@@ -23,6 +23,7 @@ pipeline {
                     image 'python:3.11-slim'
                     args '-u root -e HOME=/tmp'
                 }
+            
             }
             steps {
                 echo '🔧 Installation des dépendances...'
@@ -68,6 +69,48 @@ pipeline {
             steps {
                 echo '🐳 Construction de l\'image Docker...'
                 sh 'docker build -t devsecops-app:latest .'
+            }
+        }
+        // ── STAGE 4.5 : SCA avec Trivy ──
+        stage('SCA - Trivy Scan') {
+            steps {
+                echo '🔬 Analyse des dépendances et de l\'image (SCA)...'
+
+                // Pull Trivy seulement si pas déjà présent
+                sh '''
+                    docker image inspect aquasec/trivy:latest > /dev/null 2>&1 \
+                        && echo "✅ Image Trivy déjà présente — skip pull" \
+                        || docker pull aquasec/trivy:latest
+                '''
+
+                // Scanner et générer le rapport JSON
+                sh '''
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v $(pwd):/workspace \
+                    aquasec/trivy:latest image \
+                        --exit-code 0 \
+                        --severity HIGH,CRITICAL \
+                        --format json \
+                        --output /workspace/trivy-report.json \
+                        devsecops-app:latest
+                '''
+
+                // Afficher un résumé lisible dans les logs
+                sh '''
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                        --exit-code 0 \
+                        --severity HIGH,CRITICAL \
+                        devsecops-app:latest
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-report.json',
+                                    allowEmptyArchive: true
+                }
             }
         }
 

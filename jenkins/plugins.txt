@@ -1,0 +1,24 @@
+# Pipeline
+workflow-aggregator:latest
+pipeline-stage-view:latest
+pipeline-graph-view:latest
+
+# Docker
+docker-plugin:latest
+docker-workflow:latest
+
+# Git
+git:latest
+github:latest
+
+# JCasC
+configuration-as-code:latest
+
+# Rapports
+html-publisher:latest
+
+# Utilitaires
+credentials:latest
+ssh-credentials:latest
+timestamper:latest
+ansicolor:latest

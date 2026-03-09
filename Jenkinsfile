@@ -1,13 +1,11 @@
 // Jenkinsfile
 pipeline {
     agent any
-
     environment {
         APP_PORT   = '5000'
         ZAP_PORT   = '8090'
         DOCKER_NET = 'devsecops-lab'
     }
-
     stages {
 
         // ── STAGE 1 : Checkout ──
@@ -21,7 +19,10 @@ pipeline {
         // ── STAGE 2 : Build & Tests unitaires ──
         stage('Build & Test') {
             agent {
-                docker { image 'python:3.11-slim' }
+                docker {
+                    image 'python:3.11-slim'
+                    args '-u root -e HOME=/tmp'
+                }
             }
             steps {
                 echo '🔧 Installation des dépendances...'
@@ -34,7 +35,10 @@ pipeline {
         // ── STAGE 3 : SAST avec Bandit ──
         stage('SAST - Bandit Security Scan') {
             agent {
-                docker { image 'python:3.11-slim' }
+                docker {
+                    image 'python:3.11-slim'
+                    args '-u root -e HOME=/tmp'
+                }
             }
             steps {
                 echo '🔍 Analyse de sécurité statique (SAST)...'
@@ -77,6 +81,7 @@ pipeline {
                 sh '''
                     docker run --rm \
                       --network ${DOCKER_NET} \
+                      -p ${ZAP_PORT}:8090 \
                       -v $(pwd):/zap/wrk \
                       ghcr.io/zaproxy/zaproxy:stable \
                       zap-baseline.py \

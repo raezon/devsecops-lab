@@ -1,0 +1,34 @@
+jenkins:
+  systemMessage: "Jenkins DevSecOps Lab — Configured as Code"
+  numExecutors: 2
+  mode: NORMAL
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin123"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  clouds:
+    - docker:
+        name: "docker"
+        dockerApi:
+          dockerHost:
+            uri: "unix:///var/run/docker.sock"
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+  timestamper:
+    allPipelines: true
+
+tool:
+  git:
+    installations:
+      - name: "Default"
+        home: "git"

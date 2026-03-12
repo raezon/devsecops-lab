@@ -1,27 +1,46 @@
-# Pipeline
+# ============ PIPELINE CORE ============
 workflow-aggregator:latest
 pipeline-stage-view:latest
 pipeline-graph-view:latest
+pipeline-utility-steps:latest
 
-# Docker
-docker-plugin:latest
-docker-workflow:latest
-
-# Git
+# ============ GIT ============
 git:latest
+git-client:latest
 github:latest
+github-branch-source:latest
 
-# JCasC
+# ============ DOCKER ============
+docker-workflow:latest
+docker-commons:latest
+
+# ============ CREDENTIALS & SECURITY ============
+credentials:latest
+credentials-binding:latest
+ssh-credentials:latest
+ssh-agent:latest
+
+# ============ NOTIFICATIONS ============
+email-ext:latest
+mailer:latest
+
+# ============ REPORTS ============
+htmlpublisher:latest
+junit:latest
+
+# ============ CODE QUALITY ============
+warnings-ng:latest
+sonar:latest
+
+# ============ JCASC ============
 configuration-as-code:latest
 
-# Rapports
-html-publisher:latest
-
-# Utilitaires
-credentials:latest
-ssh-credentials:latest
+# ============ UTILITY ============
 timestamper:latest
 ansicolor:latest
+ws-cleanup:latest
+build-timeout:latest
+generic-webhook-trigger:latest
 
-# Pipeline Utility Steps (readJSON, readYaml, readCSV...)
-pipeline-utility-steps:latest
+# ============ MATRIX ============
+matrix-auth:latest

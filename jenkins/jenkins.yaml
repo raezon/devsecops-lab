@@ -1,34 +1,38 @@
-jenkins:
-  systemMessage: "Jenkins DevSecOps Lab — Configured as Code"
-  numExecutors: 2
-  mode: NORMAL
+version: '3.8'
 
-  securityRealm:
-    local:
-      allowsSignup: false
-      users:
-        - id: "admin"
-          password: "admin123"
+services:
 
-  authorizationStrategy:
-    loggedInUsersCanDoAnything:
-      allowAnonymousRead: false
+  jenkins:
+    image: jenkins/jenkins:lts-alpine
+    container_name: jenkins_master
+    hostname: jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      JAVA_OPTS: >-
+        -Xms1g
+        -Xmx2g
+        -XX:+UseG1GC
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.model.UpdateCenter.never=true
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devsecops-lab
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
 
-  clouds:
-    - docker:
-        name: "docker"
-        dockerApi:
-          dockerHost:
-            uri: "unix:///var/run/docker.sock"
+volumes:
+  jenkins_home:
+    driver: local
 
-unclassified:
-  location:
-    url: "http://localhost:8080/"
-  timestamper:
-    allPipelines: true
-
-tool:
-  git:
-    installations:
-      - name: "Default"
-        home: "git"
+networks:
+  devsecops-lab:
+    driver: bridge

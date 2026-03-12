@@ -1,0 +1,117 @@
+version: '3.8'
+
+# =============================================================
+#  Jenkins DevSecOps Lab
+#  - jenkins_master  : controller with CasC auto-applied
+#  - jenkins_agent   : Docker-capable inbound (JNLP) agent
+#  - dind            : Docker-in-Docker daemon for builds
+# =============================================================
+
+services:
+
+  # -----------------------------------------------------------
+  #  DOCKER-IN-DOCKER  (build daemon used by the agent)
+  # -----------------------------------------------------------
+  dind:
+    image: docker:24-dind
+    container_name: jenkins_dind
+    hostname: dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""          # disable TLS for lab simplicity
+    volumes:
+      - dind_storage:/var/lib/docker
+    networks:
+      devsecops-lab:
+        aliases:
+          - docker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  # -----------------------------------------------------------
+  #  JENKINS CONTROLLER
+  # -----------------------------------------------------------
+  jenkins:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: jenkins_master
+    hostname: jenkins
+    depends_on:
+      dind:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+      - "50000:50000"             # agent inbound port
+    environment:
+      JAVA_OPTS: >-
+        -Xms512m
+        -Xmx2g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.model.UpdateCenter.never=true
+        -Dcasc.jenkins.config=/var/jenkins_home/casc
+      # ---- CasC secrets injected as env vars ---------------
+      JENKINS_ADMIN_USER: ${JENKINS_ADMIN_USER:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-admin123}
+      JENKINS_AGENT_SECRET: ${JENKINS_AGENT_SECRET:-supersecretagent}
+      DOCKER_HOST: tcp://dind:2375
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./jenkins/casc:/var/jenkins_home/casc:ro   # CasC YAML
+      - ./jenkins/init.groovy.d:/var/jenkins_home/init.groovy.d:ro
+    networks:
+      - devsecops-lab
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+
+  # -----------------------------------------------------------
+  #  JENKINS AGENT  (inbound / JNLP)
+  # -----------------------------------------------------------
+  agent:
+    image: jenkins/inbound-agent:latest-alpine
+    container_name: jenkins_agent
+    hostname: agent
+    depends_on:
+      jenkins:
+        condition: service_healthy
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_AGENT_NAME: docker-agent
+      JENKINS_SECRET: ${JENKINS_AGENT_SECRET:-supersecretagent}
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+      DOCKER_HOST: tcp://dind:2375
+    volumes:
+      - agent_workdir:/home/jenkins/agent
+      - /var/run/docker.sock:/var/run/docker.sock  # optional host sock
+    networks:
+      - devsecops-lab
+    restart: unless-stopped
+
+# -----------------------------------------------------------
+#  VOLUMES
+# -----------------------------------------------------------
+volumes:
+  jenkins_home:
+    driver: local
+  agent_workdir:
+    driver: local
+  dind_storage:
+    driver: local
+
+# -----------------------------------------------------------
+#  NETWORKS
+# -----------------------------------------------------------
+networks:
+  devsecops-lab:
+    driver: bridge

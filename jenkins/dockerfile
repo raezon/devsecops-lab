@@ -1,0 +1,22 @@
+# =============================================================
+#  Jenkins Controller image
+#  - Plugins pre-installed (no UI wizard)
+#  - CasC plugin included for auto-configuration
+# =============================================================
+FROM jenkins/jenkins:lts-alpine
+
+USER root
+
+# Install Docker CLI so pipelines can run docker commands
+RUN apk add --no-cache docker-cli curl git
+
+USER jenkins
+
+# ---- Copy plugin list and install in one layer ----
+COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+RUN jenkins-plugin-cli \
+      --plugin-file /usr/share/jenkins/ref/plugins.txt \
+      --verbose
+
+# Skip setup wizard (already set via JAVA_OPTS but belt+suspenders)
+ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"

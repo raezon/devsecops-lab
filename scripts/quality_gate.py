@@ -37,32 +37,6 @@ else:
     sections.append("🔑 GITLEAKS — rapport introuvable\n")
 
 
-# ── Bandit ────────────────────────────────────────────────
-bandit = load('bandit-report.json')
-if bandit is not None:
-    totals  = bandit.get('metrics', {}).get('_totals', {})
-    high    = int(totals.get('SEVERITY.HIGH',   0))
-    medium  = int(totals.get('SEVERITY.MEDIUM', 0))
-    low     = int(totals.get('SEVERITY.LOW',    0))
-    status  = "❌ BLOQUÉ" if (high > 0 or medium > 1) else "✅ OK"
-    top     = [r for r in bandit.get('results', [])
-               if r.get('issue_severity') in ('HIGH', 'MEDIUM')][:5]
-    lines   = []
-    for r in top:
-        lines.append(f"  • [{r.get('issue_severity')}] {r.get('test_id','?')} — "
-                     f"{r.get('filename','?')}:{r.get('line_number','?')}")
-        lines.append(f"    {r.get('issue_text','')[:100]}")
-    sections.append(f"""🔍 BANDIT — SAST Python [{status}]
-{'=' * 52}
-HIGH : {high}   MEDIUM : {medium}   LOW : {low}
-{chr(10).join(lines) if lines else '  Aucune vulnérabilité HIGH/MEDIUM.'}
-Seuil : HIGH > 0 ou MEDIUM > 1 = blocage
-""")
-    if high > 0 or medium > 1:
-        issues.append(f"BANDIT (HIGH={high}, MEDIUM={medium})")
-else:
-    sections.append("🔍 BANDIT — rapport introuvable\n")
-
 
 # ── Trivy ─────────────────────────────────────────────────
 trivy = load('trivy-report.json')

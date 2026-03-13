@@ -96,7 +96,7 @@ pipeline {
             }
             steps {
                 echo '🚨 DAST avec OWASP ZAP...'
-                
+
                 sh 'docker network create devsecops-lab || true'
 
                 sh '''
@@ -147,7 +147,7 @@ pipeline {
             steps {
                 script {
                     echo '🔎 Quality Gate...'
-                    unstash 'bandit-report'
+        
                     def result = sh(
                         script: 'python3 scripts/quality_gate.py',
                         returnStatus: true

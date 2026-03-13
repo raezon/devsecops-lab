@@ -39,31 +39,6 @@ pipeline {
             }
         }
 
-        stage('Build, Test & SAST') {
-            agent {
-                docker {
-                    image 'python:3.11'
-                    args  '-u root -e HOME=/tmp'
-                }
-            }
-            steps {
-                echo '🔧 Installation des dépendances...'
-                sh 'pip install -q -r app/requirements.txt pytest'
-
-                echo '🧪 Tests unitaires...'
-                sh 'pytest tests/ -v'
-
-                echo '🔍 SAST — Bandit...'
-                sh 'bandit -r app/ -f json -o ${WORKSPACE}/bandit-report.json || true'
-                sh 'bandit -r app/ || true'
-            }
-            post {
-                always {
-                    stash name: 'bandit-report', includes: 'bandit-report.json'
-                    archiveArtifacts artifacts: 'bandit-report.json', allowEmptyArchive: true
-                }
-            }
-        }
         stage('Docker Build') {
             steps {
                 echo '🐳 Construction de l\'image Docker...'

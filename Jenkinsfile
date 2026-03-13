@@ -42,7 +42,7 @@ pipeline {
         stage('Build, Test & SAST') {
             agent {
                 docker {
-                    image 'python:3.11-slim'
+                    image 'python:3.11'
                     args  '-u root -e HOME=/tmp'
                 }
             }
@@ -56,9 +56,6 @@ pipeline {
                 echo '🔍 SAST — Bandit...'
                 sh 'bandit -r app/ -f json -o ${WORKSPACE}/bandit-report.json || true'
                 sh 'bandit -r app/ || true'
-
-                echo '✅ Vérification...'
-                sh 'ls -la ${WORKSPACE}/bandit-report.json'
             }
             post {
                 always {

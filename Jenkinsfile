@@ -96,6 +96,9 @@ pipeline {
             }
             steps {
                 echo '🚨 DAST avec OWASP ZAP...'
+                
+                sh 'docker network create devsecops-lab || true'
+
                 sh '''
                     docker image inspect ghcr.io/zaproxy/zaproxy:stable > /dev/null 2>&1 \
                         && echo "✅ ZAP déjà présent" \

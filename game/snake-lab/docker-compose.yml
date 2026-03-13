@@ -1,0 +1,18 @@
+services:
+  snake-game:
+    build: .
+    container_name: auto_snake_bot
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
+  web-viewer:
+    image: amir20/dozzle:latest
+    container_name: snake_web_ui
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8888:8080"  # Browse to http://localhost:8888
+    restart: always

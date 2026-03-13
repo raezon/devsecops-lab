@@ -49,11 +49,16 @@ pipeline {
             steps {
                 echo '🔧 Installation des dépendances...'
                 sh 'pip install -q -r app/requirements.txt pytest'
+
                 echo '🧪 Tests unitaires...'
                 sh 'pytest tests/ -v'
+
                 echo '🔍 SAST — Bandit...'
-                sh 'bandit -r app/ -f json -o bandit-report.json || true'
+                sh 'bandit -r app/ -f json -o ${WORKSPACE}/bandit-report.json || true'
                 sh 'bandit -r app/ || true'
+
+                echo '✅ Vérification...'
+                sh 'ls -la ${WORKSPACE}/bandit-report.json'
             }
             post {
                 always {
@@ -62,7 +67,6 @@ pipeline {
                 }
             }
         }
-
         stage('Docker Build') {
             steps {
                 echo '🐳 Construction de l\'image Docker...'

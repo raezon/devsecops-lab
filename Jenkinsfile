@@ -65,59 +65,38 @@ pipeline {
         // =============================================================
         //  BUILD TEST SAST
         // =============================================================
-        stage('🔍 Build, Test & SAST') {
-            agent {
-                docker {
-                    image 'python:3.11-slim' // "slim" est plus léger/rapide
-                    args  '-u root' 
-                }
-            }
+        // =============================================================
+        //  FUSION : SAST, BUILD & TESTS
+        // =============================================================
+        stage('🛠️ Build, Scan & Test') {
             steps {
-                echo '🔧 Installation des dépendances...'
-                // On installe tout d'un coup
-                sh 'pip install -q -r app/requirements.txt pytest bandit'
+                script {
+                    echo '🔍 1. Exécution du SAST (Bandit)...'
+                    // On lance Bandit via un docker éphémère pour scanner le code source
+                    sh '''
+                        docker run --rm -v "$(pwd)":/app -w /app python:3.11-slim /bin/sh -c "
+                            pip install -q bandit && \
+                            bandit -r app/ -f json -o bandit-report.json || true
+                        "
+                    '''
 
-                echo '🧪 Tests unitaires...'
-                sh 'pytest app/tests/ -v --tb=short || true'
+                    echo '🐳 2. Construction de l\'image Docker...'
+                    sh "docker build -t devsecops-app:latest app/"
 
-                echo '🔍 SAST — Bandit...'
-                sh '''
-                    # On génère le rapport JSON (pour l'IA) 
-                    # ET on affiche le résumé dans les logs Jenkins en même temps
-                    bandit -r app/ -f json -o bandit-report.json || true
-                    bandit -r app/ -f txt || true
-                '''
+                    echo '🧪 3. Exécution des Tests Unitaires...'
+                    // On lance les tests DIRECTEMENT à l'intérieur de l'image qu'on vient de construire
+                    // Pas besoin de réinstaller pytest dans Jenkins !
+                    sh 'docker run --rm devsecops-app:latest pytest tests/ || true'
+                }
             }
             post {
                 always {
-                    // On vérifie si le fichier existe avant de stasher pour éviter l'erreur "No files included"
-                    script {
-                        def exists = fileNameExists('bandit-report.json')
-                        if (exists) {
-                            stash name: 'bandit-report', includes: 'bandit-report.json'
-                        }
-                    }
+                    // On sauvegarde le rapport Bandit pour l'IA plus tard
+                    stash name: 'bandit-report', includes: 'bandit-report.json', allowEmpty: true
                     archiveArtifacts artifacts: 'bandit-report.json', allowEmptyArchive: true
                 }
             }
         }
-        // =============================================================
-        //  DOCKER BUILD
-        // =============================================================
-        stage('🐳 Docker Build') {
-            steps {
-                echo '🐳 Construction de l\'image Docker...'
-                sh """
-                    docker build \
-                      -t devsecops-app:latest \
-                      -t devsecops-app:${env.BUILD_NUMBER} \
-                      -t devsecops-app:${env.GIT_COMMIT.take(7)} \
-                      app/
-                """
-                echo "🏷️ Tags: latest | ${env.BUILD_NUMBER} | ${env.GIT_COMMIT.take(7)}"
-            }
-        }
-
         // =============================================================
         //  SCA TRIVY
         // =============================================================

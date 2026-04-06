@@ -35,6 +35,10 @@ sonar:latest
 # ============ JCASC ============
 configuration-as-code:latest
 
+# ============ VAULT ============
+# FIX : manquant — cause du boot failure "vaultConfiguration unknown"
+hashicorp-vault-plugin:latest
+
 # ============ UTILITY ============
 timestamper:latest
 ansicolor:latest

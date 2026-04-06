@@ -1,10 +1,6 @@
 version: '3.8'
 
 services:
-
-  # -----------------------------------------------------------
-  #  DOCKER-IN-DOCKER
-  # -----------------------------------------------------------
   dind:
     image: docker:26-dind
     container_name: jenkins_dind
@@ -24,10 +20,18 @@ services:
       interval: 20s
       timeout: 10s
       retries: 5
-
-  # -----------------------------------------------------------
-  #  JENKINS CONTROLLER
-  # -----------------------------------------------------------
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: vault_server
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "myroot"
+      VAULT_ADDR: "http://0.0.0.0:8200"
+    networks:
+      - devsecops-lab
+    cap_add:
+      - IPC_LOCK
   jenkins:
     build:
       context: .
@@ -52,6 +56,11 @@ services:
       DOCKER_HOST: tcp://dind:2375
       VAULT_ADDR: ${VAULT_ADDR}
       VAULT_TOKEN: ${VAULT_TOKEN}
+      JENKINS_ADMIN_USER: ${JENKINS_ADMIN_USER}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      REPORT_EMAIL: ${REPORT_EMAIL}
     volumes:
       - jenkins_home:/var/jenkins_home
       - ./jenkins/casc:/var/jenkins_home/casc:ro
@@ -68,11 +77,8 @@ services:
       start_period: 90s
     restart: unless-stopped
 
-  # -----------------------------------------------------------
-  #  JENKINS AGENT
-  # -----------------------------------------------------------
   agent:
-    image: jenkins/inbound-agent:latest-alpine
+    image: jenkins/inbound-agent:latest
     container_name: jenkins_agent
     hostname: agent
     depends_on:
@@ -81,22 +87,23 @@ services:
     environment:
       JENKINS_URL: http://jenkins:8080
       JENKINS_AGENT_NAME: docker-agent
+      JENKINS_SECRET: ${JENKINS_AGENT_SECRET}
       JENKINS_AGENT_WORKDIR: /home/jenkins/agent
-      DOCKER_HOST: tcp://dind:2375
+      DOCKER_HOST: tcp://dind:2375  # suffit, pas besoin du socket en plus
       VAULT_ADDR: ${VAULT_ADDR}
       VAULT_TOKEN: ${VAULT_TOKEN}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      REPORT_EMAIL: ${REPORT_EMAIL}
     volumes:
       - agent_workdir:/home/jenkins/agent
-      - /var/run/docker.sock:/var/run/docker.sock
+      # /var/run/docker.sock supprimé — redondant avec DOCKER_HOST tcp://dind
     networks:
       - devsecops-lab
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
-  # -----------------------------------------------------------
-  #  VOLUMES
-  # -----------------------------------------------------------
 volumes:
   jenkins_home:
     driver: local
@@ -105,9 +112,6 @@ volumes:
   dind_storage:
     driver: local
 
-  # -----------------------------------------------------------
-  #  NETWORKS
-  # -----------------------------------------------------------
 networks:
   devsecops-lab:
     driver: bridge

@@ -1,0 +1,97 @@
+# =============================================================
+#  Jenkins Configuration as Code
+# =============================================================
+jenkins:
+  systemMessage: "🔒 DevSecOps Lab — Jenkins CI/CD"
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  remotingSecurity:
+    enabled: true
+
+# =============================================================
+#  CREDENTIALS
+# =============================================================
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              id: "openrouter-api-key"
+              secret: "${OPENROUTER_API_KEY}"
+              description: "OpenRouter DeepSeek API Key"
+              scope: GLOBAL
+          - string:
+              id: "resend-api-key"
+              secret: "${RESEND_API_KEY}"
+              description: "Resend Email API Key"
+              scope: GLOBAL
+          - string:
+              id: "vault-token"
+              secret: "${VAULT_TOKEN}"
+              description: "HashiCorp Vault Token"
+              scope: GLOBAL
+          - string:
+              id: "jenkins-agent-secret"
+              secret: "${JENKINS_AGENT_SECRET}"
+              description: "Jenkins Agent Secret"
+              scope: GLOBAL
+          - string:
+              id: "report-email"
+              secret: "${REPORT_EMAIL}"
+              description: "Email destinataire des rapports"
+              scope: GLOBAL
+
+# =============================================================
+#  UNCLASSIFIED
+# =============================================================
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+    adminAddress: "DevSecOps Pipeline <onboarding@resend.dev>"
+
+  mailer:
+    smtpHost: "smtp.resend.com"
+    smtpPort: "465"
+    useSsl: true
+    authentication:
+      username: "resend"
+      password: "${RESEND_API_KEY}"
+    defaultSuffix: "@resend.dev"
+    replyToAddress: "onboarding@resend.dev"
+
+  email-ext:
+      defaultContentType: "text/html"
+      defaultSuffix: "@resend.dev"
+      defaultReplyTo: "onboarding@resend.dev"
+      defaultRecipients: "${REPORT_EMAIL}"
+      defaultSubject: "[Jenkins] $PROJECT_NAME - Build #$BUILD_NUMBER - $BUILD_STATUS"
+      maxAttachmentSize: -1
+      debugMode: false
+      # On retire smtpHost, smtpPort et useSsl d'ici car ils causent le crash (deprecated)
+
+  # =========================================================
+  # FIX : Structure imbriquée sous "configuration"
+  # =========================================================
+  hashicorpVault:
+    configuration:
+      vaultUrl: "${VAULT_ADDR}"
+      vaultCredentialId: "vault-token"
+      engineVersion: 2
+
+  timestamper:
+    allPipelines: true
+    systemTimeFormat: "HH:mm:ss"
+    elapsedTimeFormat: "'<b>'HH:mm:ss.S'</b>'"
+
+  ansiColorBuildWrapper:
+    globalColorMapName: "xterm"

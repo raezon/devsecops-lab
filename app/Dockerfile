@@ -1,12 +1,14 @@
-# Dockerfile
+# Dockerfile corrigé
 FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY app/requirements.txt .
-RUN pip install --no-cache-dir flask
+# On retire "app/" car Docker est déjà dans ce dossier
+COPY requirements.txt . 
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/ .
+# On copie tout le contenu du dossier actuel (.) vers /app
+COPY . .
 
 EXPOSE 5000
 

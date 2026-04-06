@@ -68,36 +68,39 @@ pipeline {
         stage('🔍 Build, Test & SAST') {
             agent {
                 docker {
-                    image 'python:3.11'
-                    args  '-u root -e HOME=/tmp'
+                    image 'python:3.11-slim' // "slim" est plus léger/rapide
+                    args  '-u root' 
                 }
             }
             steps {
                 echo '🔧 Installation des dépendances...'
-                sh 'pip install -q -r app/requirements.txt pytest'
+                // On installe tout d'un coup
+                sh 'pip install -q -r app/requirements.txt pytest bandit'
 
                 echo '🧪 Tests unitaires...'
                 sh 'pytest app/tests/ -v --tb=short || true'
 
                 echo '🔍 SAST — Bandit...'
                 sh '''
-                    bandit -r app/ \
-                      -f json \
-                      -o ${WORKSPACE}/bandit-report.json \
-                      || true
+                    # On génère le rapport JSON (pour l'IA) 
+                    # ET on affiche le résumé dans les logs Jenkins en même temps
+                    bandit -r app/ -f json -o bandit-report.json || true
+                    bandit -r app/ -f txt || true
                 '''
-                sh 'bandit -r app/ || true'
             }
             post {
                 always {
-                    stash name: 'bandit-report',
-                          includes: 'bandit-report.json'
-                    archiveArtifacts artifacts: 'bandit-report.json',
-                                     allowEmptyArchive: true
+                    // On vérifie si le fichier existe avant de stasher pour éviter l'erreur "No files included"
+                    script {
+                        def exists = fileNameExists('bandit-report.json')
+                        if (exists) {
+                            stash name: 'bandit-report', includes: 'bandit-report.json'
+                        }
+                    }
+                    archiveArtifacts artifacts: 'bandit-report.json', allowEmptyArchive: true
                 }
             }
         }
-
         // =============================================================
         //  DOCKER BUILD
         // =============================================================

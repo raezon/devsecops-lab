@@ -26,7 +26,7 @@ pipeline {
                 sh '''
                     for IMAGE in \
                         zricethezav/gitleaks:latest \
-                        aquasec/trivy:latest \
+                        ghcr.io/aquasecurity/trivy:latest \
                         ghcr.io/zaproxy/zaproxy:stable
                     do
                         docker image inspect $IMAGE > /dev/null 2>&1 \
@@ -125,7 +125,7 @@ pipeline {
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
                       -v $(pwd):/workspace \
-                      aquasec/trivy:latest image \
+                      ghcr.io/aquasecurity/trivy:latest image \
                         --exit-code 0 \
                         --severity HIGH,CRITICAL \
                         --format json \
@@ -136,7 +136,7 @@ pipeline {
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
                       -v $(pwd):/workspace \
-                      aquasec/trivy:latest image \
+                      ghcr.io/aquasecurity/trivy:latest image \
                         --format cyclonedx \
                         --output /workspace/sbom.json \
                         devsecops-app:latest

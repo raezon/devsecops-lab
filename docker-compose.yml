@@ -26,6 +26,7 @@ services:
     ports:
       - "8200:8200"
     environment:
+      
       VAULT_DEV_ROOT_TOKEN_ID: "myroot"
       VAULT_ADDR: "http://0.0.0.0:8200"
     networks:

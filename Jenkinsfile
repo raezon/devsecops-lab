@@ -46,7 +46,7 @@ pipeline {
                 echo '🔑 Détection de secrets dans le code...'
                 sh '''
                     docker run --rm \
-                      -v $(pwd):/repo \
+                      -v "$(pwd)":/repo \
                       zricethezav/gitleaks:latest detect \
                         --source /repo \
                         --report-format json \
@@ -124,7 +124,7 @@ pipeline {
                 sh '''
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
-                      -v $(pwd):/workspace \
+                      -v "$(pwd)":/workspace \
                       ghcr.io/aquasecurity/trivy:latest image \
                         --exit-code 0 \
                         --severity HIGH,CRITICAL \
@@ -135,7 +135,7 @@ pipeline {
                 sh '''
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
-                      -v $(pwd):/workspace \
+                      -v "$(pwd)":/workspace \
                       ghcr.io/aquasecurity/trivy:latest image \
                         --format cyclonedx \
                         --output /workspace/sbom.json \
@@ -173,7 +173,7 @@ pipeline {
                       --user root \
                       --network ${DOCKER_NET} \
                       -p ${ZAP_PORT}:8090 \
-                      -v $(pwd):/zap/wrk:rw \
+                      -v "$(pwd)":/zap/wrk:rw \
                       ghcr.io/zaproxy/zaproxy:stable \
                       zap-baseline.py \
                         -t http://target-app:5000 \

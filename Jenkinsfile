@@ -195,7 +195,7 @@ pipeline {
                     sh 'pip install requests --quiet || true'
 
                     def result = sh(
-                        script: 'python3 scripts/ai_security_report.py',
+                        script: 'python3 -u scripts/ai_security_report.py', 
                         returnStatus: true
                     )
 

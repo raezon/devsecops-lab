@@ -100,11 +100,11 @@ pipeline {
         // =============================================================
         //  SCA TRIVY
         // =============================================================
-        stage('🔬 SCA — Trivy & SBOM') {
+       stage('🔬 SCA — Trivy & SBOM') {
             steps {
                 echo '🔬 SCA + SBOM avec Trivy...'
                 sh '''
-                    # 1. Scan de vulnérabilités
+                    # Ici on est dans du Shell (sh), le # est autorisé
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
                       -v "$(pwd)":/workspace \
@@ -115,7 +115,6 @@ pipeline {
                         --output /workspace/trivy-report.json \
                         devsecops-app:latest
 
-                    # 2. Génération du SBOM
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
                       -v "$(pwd)":/workspace \
@@ -124,17 +123,13 @@ pipeline {
                         --output /workspace/sbom.json \
                         devsecops-app:latest
 
-                    # --- LA CORRECTION EST ICI ---
-                    # On rend les fichiers lisibles par Jenkins (car Docker les crée en root)
                     chmod 666 trivy-report.json sbom.json
                 '''
             }
             post {
                 always {
-                    # On archive seulement si les fichiers existent
-                    archiveArtifacts artifacts: 'trivy-report.json, sbom.json',
-                                     fingerprint: true,
-                                     allowEmptyArchive: true
+                    // Ici on est dans Groovy, on utilise // pour les commentaires
+                    archiveArtifacts artifacts: 'trivy-report.json, sbom.json', allowEmptyArchive: true
                 }
             }
         }

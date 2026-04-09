@@ -166,8 +166,7 @@ pipeline {
             }
             post {
                 always {
-                    sh 'docker stop target-app || true'
-                    sh 'docker rm   target-app || true'
+                   
                     publishHTML([
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
@@ -229,8 +228,6 @@ pipeline {
     // =============================================================
     post {
         always {
-            sh 'docker stop target-app || true'
-            sh 'docker rm   target-app || true'
             sh 'docker rmi  devsecops-app:latest || true'
             sh 'docker network rm ${DOCKER_NET} || true'
             cleanWs()

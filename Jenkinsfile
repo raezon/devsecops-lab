@@ -143,30 +143,40 @@ pipeline {
             steps {
                 echo '🚨 DAST avec OWASP ZAP...'
                 sh '''
+                    # 1. On s'assure que le dossier a les bons droits pour le conteneur
+                    chmod 777 "$(pwd)"
+
+                    # 2. Lancement de l'app (on augmente un peu le sleep pour être sûr)
                     docker run -d \
-                      --name target-app \
-                      --network ${DOCKER_NET} \
-                      -p ${APP_PORT}:5000 \
-                      devsecops-app:latest
-                    sleep 5
+                    --name target-app \
+                    --network ${DOCKER_NET} \
+                    -p ${APP_PORT}:5000 \
+                    devsecops-app:latest
+                    sleep 10
                 '''
                 sh '''
+                    # 3. On lance ZAP en spécifiant /zap/wrk/ pour les rapports
                     docker run --rm \
-                      --user root \
-                      --network ${DOCKER_NET} \
-                      -p ${ZAP_PORT}:8090 \
-                      -v "$(pwd)":/zap/wrk:rw \
-                      ghcr.io/zaproxy/zaproxy:stable \
-                      zap-baseline.py \
+                    --user root \
+                    --network ${DOCKER_NET} \
+                    -v "$(pwd)":/zap/wrk:rw \
+                    ghcr.io/zaproxy/zaproxy:stable \
+                    zap-baseline.py \
                         -t http://target-app:5000 \
-                        -r zap-report.html \
-                        -J zap-report.json \
+                        -r /zap/wrk/zap-report.html \
+                        -J /zap/wrk/zap-report.json \
                         -I
                 '''
             }
             post {
                 always {
-                   
+                    // On nettoie le conteneur cible
+                    sh 'docker stop target-app || true'
+                    sh 'docker rm target-app || true'
+                    
+                    // On archive même si le fichier est vide ou absent pour ne pas faire crash le pipeline
+                    archiveArtifacts artifacts: 'zap-report.json', allowEmptyArchive: true
+                    
                     publishHTML([
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
@@ -175,8 +185,6 @@ pipeline {
                         reportFiles:           'zap-report.html',
                         reportName:            'ZAP Security Report'
                     ])
-                    archiveArtifacts artifacts: 'zap-report.json',
-                                     allowEmptyArchive: true
                 }
             }
         }

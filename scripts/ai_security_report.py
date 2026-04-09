@@ -392,25 +392,14 @@ def generate_html_email(analysis: dict, build_info: dict) -> str:
 """
 
 
-def send_email_resend(
-    api_key: str,
-    to: str,
-    subject: str,
-    html: str,
-    attachments: list[dict]
-) -> bool:
-    """Send email via Resend API with attachments"""
+def send_email_resend(api_key, to, subject, html, attachments):
     import base64
-
     attach_payload = []
     for att in attachments:
         path = Path(att["path"])
         if path.exists():
             content = base64.b64encode(path.read_bytes()).decode()
-            attach_payload.append({
-                "filename": att["name"],
-                "content": content
-            })
+            attach_payload.append({"filename": att["name"], "content": content})
 
     payload = {
         "from": "DevSecOps Pipeline <onboarding@resend.dev>",
@@ -420,18 +409,19 @@ def send_email_resend(
         "attachments": attach_payload
     }
 
+    print(f"📡 Tentative d'envoi à {to}...")
     response = requests.post(
         "https://api.resend.com/emails",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        },
-        json=payload,
-        timeout=30
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json=payload
     )
 
-    response.raise_for_status()
-    print(f"✅ Email envoyé — ID: {response.json().get('id')}")
+    # C'EST ICI QUE CA DEVIENT UTILE :
+    if response.status_code != 200 and response.status_code != 201:
+        print(f"❌ ERREUR RESEND : {response.text}") # <--- L'ERREUR S'AFFICHERA ICI
+        return False
+    
+    print(f"✅ Email envoyé ! ID: {response.json().get('id')}")
     return True
 
 

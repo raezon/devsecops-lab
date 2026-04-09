@@ -251,7 +251,7 @@ pipeline {
                             -e GIT_BRANCH="${GIT_BRANCH}" \
                             ${PYTHON_IMAGE} /bin/sh -c '
                                 pip install -q requests &&
-                                python /workspace/scripts/ai_security_report.py
+                                python scripts/ai_security_report.py
                             '
                     """
                 }

@@ -238,8 +238,9 @@ pipeline {
                 ]) {
                     echo '🤖 Analyse IA et Quality Gate...'
                     sh """
-                        docker run --rm \
+                       docker run --rm \
                             -v ${WORKSPACE}:/workspace \
+                            -w /workspace \
                             -e OPENROUTER_API_KEY="${OPENROUTER_API_KEY}" \
                             -e RESEND_API_KEY="${RESEND_API_KEY}" \
                             -e REPORT_EMAIL="${REPORT_EMAIL}" \
@@ -251,7 +252,7 @@ pipeline {
                             -e GIT_BRANCH="${GIT_BRANCH}" \
                             ${PYTHON_IMAGE} /bin/sh -c '
                                 pip install -q requests &&
-                                python scripts/ai_security_report.py
+                                python3 scripts/ai_security_report.py
                             '
                     """
                 }

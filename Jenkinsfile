@@ -100,7 +100,9 @@ pipeline {
         // =============================================================
         //  SCA TRIVY
         // =============================================================
-stage('🔬 SCA — Trivy & SBOM') {
+
+
+        stage('🔬 SCA — Trivy & SBOM') {
             steps {
                 echo '🔬 SCA + SBOM avec Trivy...'
                 sh '''

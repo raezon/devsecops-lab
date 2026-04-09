@@ -3,7 +3,15 @@ FROM jenkins/jenkins:lts-alpine
 USER root
 
 # 1. Installation des outils
-RUN apk add --no-cache docker-cli curl git shadow
+
+# 1. Installation des outils (Ajout de python3 et py3-pip)
+RUN apk add --no-cache \
+    docker-cli \
+    curl \
+    git \
+    shadow \
+    python3 \
+    py3-pip
 
 # 2. Correction des permissions (Méthode Safe Alpine)
 RUN addgroup -g 999 docker || true

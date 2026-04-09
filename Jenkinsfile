@@ -163,8 +163,8 @@ pipeline {
                     ghcr.io/zaproxy/zaproxy:stable \
                     zap-baseline.py \
                         -t http://target-app:5000 \
-                        -r /zap/wrk/zap-report.html \
-                        -J /zap/wrk/zap-report.json \
+                        -r zap-report.html \
+                        -J zap-report.json \
                         -I
                 '''
             }

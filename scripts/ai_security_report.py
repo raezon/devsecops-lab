@@ -96,7 +96,7 @@ def call_deepseek(prompt: str, api_key: str) -> dict:
             "X-Title": "DevSecOps Pipeline"
         },
         json={
-            "model": "google/gemini-2.0-flash-exp:free",
+            "model": "black-forest-labs/flux.2-pro",
             "messages": [
                 {
                     "role": "user",

@@ -14,15 +14,76 @@ from pathlib import Path
 
 
 def load_report(path: str) -> dict | str:
-    """Load a JSON or text report safely"""
+    """Charge le rapport et réduit sa taille pour l'IA"""
     p = Path(path)
     if not p.exists():
         return {}
     try:
-        return json.loads(p.read_text())
-    except json.JSONDecodeError:
-        return p.read_text()
+        data = json.loads(p.read_text())
 
+        # --- TRIVY : ne garder que les vulnérabilités CRITICAL/HIGH ---
+        if isinstance(data, dict) and "Results" in data:
+            vulns = []
+            for result in data.get("Results", []):
+                for v in result.get("Vulnerabilities") or []:
+                    if v.get("Severity") in ("CRITICAL", "HIGH"):
+                        vulns.append({
+                            "id":    v.get("VulnerabilityID"),
+                            "pkg":   v.get("PkgName"),
+                            "ver":   v.get("InstalledVersion"),
+                            "fix":   v.get("FixedVersion"),
+                            "sev":   v.get("Severity"),
+                            "title": v.get("Title", "")[:120],
+                        })
+            return {"vulnerabilities": vulns[:30]}  # 30 max
+
+        # --- GITLEAKS : liste de secrets, on coupe à 10 ---
+        if isinstance(data, list):
+            return [
+                {
+                    "rule":   s.get("RuleID") or s.get("rule"),
+                    "file":   s.get("File")   or s.get("file"),
+                    "line":   s.get("StartLine") or s.get("line"),
+                    "secret": (s.get("Secret") or s.get("secret") or "")[:40],
+                }
+                for s in data[:10]
+            ]
+
+        # --- BANDIT : ne garder que HIGH/MEDIUM, 20 max ---
+        if isinstance(data, dict) and "results" in data:
+            issues = [
+                {
+                    "test":     i.get("test_id"),
+                    "sev":      i.get("issue_severity"),
+                    "conf":     i.get("issue_confidence"),
+                    "text":     i.get("issue_text", "")[:120],
+                    "file":     i.get("filename"),
+                    "line":     i.get("line_number"),
+                }
+                for i in data["results"]
+                if i.get("issue_severity") in ("HIGH", "MEDIUM")
+            ]
+            return {"results": issues[:20], "metrics": data.get("metrics", {})}
+
+        # --- ZAP : alertes triées par risk, 20 max ---
+        if isinstance(data, dict) and "site" in data:
+            alerts = []
+            for site in data.get("site", []):
+                for alert in site.get("alerts", []):
+                    if int(alert.get("riskcode", 0)) >= 2:  # Medium+
+                        alerts.append({
+                            "name":     alert.get("name"),
+                            "risk":     alert.get("riskdesc"),
+                            "solution": alert.get("solution", "")[:200],
+                            "count":    alert.get("count"),
+                            "url":      (alert.get("instances") or [{}])[0].get("uri", "")[:100],
+                        })
+            return {"alerts": alerts[:20]}
+
+        return data  # fallback : retourner tel quel
+
+    except json.JSONDecodeError:
+        return p.read_text()[:3000]  # texte brut : couper à 3000 chars
 
 def build_analysis_prompt(reports: dict) -> str:
     """Build the prompt for DeepSeek"""
@@ -96,7 +157,7 @@ def call_deepseek(prompt: str, api_key: str) -> dict:
             "X-Title": "DevSecOps Pipeline"
         },
         json={
-            "model": "black-forest-labs/flux.2-pro",
+            "model": "deepseek/deepseek-chat",
             "messages": [
                 {
                     "role": "user",

@@ -1,6 +1,14 @@
 version: '3.8'
 
+# ══════════════════════════════════════════════════════════════════════════════
+# FIX CRITIQUE : DinD doit monter jenkins_home ET agent_workdir
+# Sinon, quand Jenkins passe -v /var/jenkins_home/workspace/...:/workspace
+# à DinD via TCP, DinD cherche ce chemin sur SON propre filesystem → fail silencieux
+# Tous les rapports (Trivy, Gitleaks, ZAP) apparaissaient vides à cause de ça.
+# ══════════════════════════════════════════════════════════════════════════════
+
 services:
+
   dind:
     image: docker:26-dind
     container_name: jenkins_dind
@@ -10,6 +18,8 @@ services:
       DOCKER_TLS_CERTDIR: ""
     volumes:
       - dind_storage:/var/lib/docker
+      - jenkins_home:/var/jenkins_home       # ← FIX #1 : partagé avec jenkins
+      - agent_workdir:/home/jenkins/agent    # ← FIX #1 : partagé avec agent
     networks:
       devsecops-lab:
         aliases:
@@ -20,19 +30,20 @@ services:
       interval: 20s
       timeout: 10s
       retries: 5
+
   vault:
     image: hashicorp/vault:1.15
     container_name: vault_server
     ports:
       - "8200:8200"
     environment:
-      
       VAULT_DEV_ROOT_TOKEN_ID: "myroot"
       VAULT_ADDR: "http://0.0.0.0:8200"
     networks:
       - devsecops-lab
     cap_add:
       - IPC_LOCK
+
   jenkins:
     build:
       context: .
@@ -90,7 +101,7 @@ services:
       JENKINS_AGENT_NAME: docker-agent
       JENKINS_SECRET: ${JENKINS_AGENT_SECRET}
       JENKINS_AGENT_WORKDIR: /home/jenkins/agent
-      DOCKER_HOST: tcp://dind:2375  # suffit, pas besoin du socket en plus
+      DOCKER_HOST: tcp://dind:2375
       VAULT_ADDR: ${VAULT_ADDR}
       VAULT_TOKEN: ${VAULT_TOKEN}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
@@ -98,7 +109,6 @@ services:
       REPORT_EMAIL: ${REPORT_EMAIL}
     volumes:
       - agent_workdir:/home/jenkins/agent
-      # /var/run/docker.sock supprimé — redondant avec DOCKER_HOST tcp://dind
     networks:
       - devsecops-lab
     extra_hosts:

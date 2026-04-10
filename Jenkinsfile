@@ -271,7 +271,7 @@ pipeline {
                             ${PYTHON_IMAGE} /bin/sh -c '
                                 pip install -q requests &&
                                 ls -l
-                                python3 $JOB_NAME/scripts/ai_security_report.py
+                                python3 scripts/ai_security_report.py
                             '
                     """
                 }

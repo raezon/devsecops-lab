@@ -19,11 +19,10 @@ def runSecretsScan() {
                     cat "${env.WORKSPACE}/gitleaks-report.json" | head -5
                 """
             }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'gitleaks-report.json',
+            finally {
+                archiveArtifacts artifacts: 'gitleaks-report.json',
                                      allowEmptyArchive: true
-                }
+                
             }
         
 }

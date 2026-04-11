@@ -26,12 +26,12 @@ def runBuildAndScan(){
                     """
                 }
             }
-            post {
-                always {
-                    stash includes: 'bandit-report.json', name: 'bandit-report', allowEmpty: true
+            finally {
+               
+                stash includes: 'bandit-report.json', name: 'bandit-report', allowEmpty: true
                     archiveArtifacts artifacts: 'bandit-report.json',
                                      allowEmptyArchive: true
-                }
+                
             }
         
 

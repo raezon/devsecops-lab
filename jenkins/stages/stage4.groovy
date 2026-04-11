@@ -32,11 +32,11 @@ def runScan() {
                     echo "✅ Trivy terminé"
                 """
             }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'trivy-report.json, sbom.json',
+            finally {
+                
+                archiveArtifacts artifacts: 'trivy-report.json, sbom.json',
                                      allowEmptyArchive: true
-                }
+                
             }
         
 }

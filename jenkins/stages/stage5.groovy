@@ -43,12 +43,12 @@ def runOwaspZap() {
                                "${env.WORKSPACE}/zap-report.html" || true
                 """
             }
-            post {
-                always {
-                    sh "docker rm -f devsecops-target 2>/dev/null || true"
-                    archiveArtifacts artifacts: 'zap-report.json, zap-report.html',
+            finally {
+                
+                sh "docker rm -f devsecops-target 2>/dev/null || true"
+                archiveArtifacts artifacts: 'zap-report.json, zap-report.html',
                                      allowEmptyArchive: true
-                    publishHTML(target: [
+                publishHTML(target: [
                         allowMissing         : true,
                         alwaysLinkToLastBuild: true,
                         keepAll              : true,
@@ -56,7 +56,7 @@ def runOwaspZap() {
                         reportFiles          : 'zap-report.html',
                         reportName           : 'ZAP Security Report'
                     ])
-                }
+                
             }
         
 }

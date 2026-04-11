@@ -28,8 +28,8 @@ def runAiReports(){
                     """
                 }
             }
-            post {
-                always {
+            finally {
+                
                     archiveArtifacts artifacts: 'ai-security-analysis.json, ai-security-report.html',
                                      allowEmptyArchive: true
                     publishHTML(target: [
@@ -40,7 +40,7 @@ def runAiReports(){
                         reportFiles          : 'ai-security-report.html',
                         reportName           : 'AI Security Report'
                     ])
-                }
+                
             }
         
 }

@@ -34,20 +34,23 @@ pipeline {
         // STAGE 2 — SECRETS SCAN (GITLEAKS)
         // ─────────────────────────────────────────────────────────────────
         stage('🔑 Secrets Scan — Gitleaks') {
-            script{
+            steps{
+                script{
                     def runSecretsScan = load 'jenkins/stages/stage2.groovy'
                     runSecretsScan.runSecretsScan()
                 }
-            
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────
         // STAGE 3 — BUILD, SAST (BANDIT) & TESTS
         // ─────────────────────────────────────────────────────────────────
         stage('🛠️ Build, Scan & Test') {
-            script{
-                def runBuildAndScan = load 'jenkins/stages/stage3.groovy'
-                runBuildAndScan.runBuildAndScan()
+            steps{
+                script{
+                    def runBuildAndScan = load 'jenkins/stages/stage3.groovy'
+                    runBuildAndScan.runBuildAndScan()
+                }
             }
         }
 

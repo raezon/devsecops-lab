@@ -24,7 +24,7 @@ pipeline {
         stage('📥 Checkout & Preparation') {
             steps{
                 script{
-                    def runCheckout = load 'jenkins/stages/checkout.groovy'
+                    def runCheckout = load 'jenkins/stages/stage1.groovy'
                     runCheckout.runCheckout()
                 }
             }

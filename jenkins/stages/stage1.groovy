@@ -1,6 +1,6 @@
 def runCheckout() {
     stage('📥 Checkout & Preparation') {
-            steps {
+            
                 echo '📥 Récupération du code source...'
                 checkout scm
 
@@ -38,7 +38,6 @@ def runCheckout() {
 
                 echo '✅ Environnement prêt'
             }
-        }
 }
 
 return this

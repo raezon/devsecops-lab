@@ -1,6 +1,6 @@
 def runAiReports(){
     stage('🤖 AI Report & Quality Gate') {
-            steps {
+            
                 withCredentials([
                     string(credentialsId: 'openrouter-api-key', variable: 'OPENROUTER_API_KEY'),
                     string(credentialsId: 'resend-api-key',     variable: 'RESEND_API_KEY'),
@@ -42,7 +42,7 @@ def runAiReports(){
                     ])
                 }
             }
-        }
+        
 }
 
 return this

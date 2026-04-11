@@ -1,6 +1,6 @@
 def runScan() {
         stage('🔬 SCA — Trivy & SBOM') {
-            steps {
+            
                 echo '🔬 SCA + SBOM avec Trivy...'
                 sh """
                     # Scan vulnérabilités
@@ -38,7 +38,7 @@ def runScan() {
                                      allowEmptyArchive: true
                 }
             }
-        }
+        
 }
 
 return this

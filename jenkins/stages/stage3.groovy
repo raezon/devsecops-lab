@@ -1,6 +1,6 @@
 def runBuildAndScan(){
      stage('🛠️ Build, Scan & Test') {
-            steps {
+            
                 script {
 
                     echo '🔍 1. Exécution du SAST (Bandit)...'
@@ -33,7 +33,7 @@ def runBuildAndScan(){
                                      allowEmptyArchive: true
                 }
             }
-        }
+        
 
 }
 

@@ -1,6 +1,6 @@
 def runOwaspZap() {
         stage('🚨 DAST — OWASP ZAP') {
-            steps {
+            
                 echo '🚨 Démarrage de l\'application cible...'
                 sh """
                     docker run -d \
@@ -58,7 +58,7 @@ def runOwaspZap() {
                     ])
                 }
             }
-        }
+        
 }
 
 return this

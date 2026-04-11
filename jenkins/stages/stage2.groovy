@@ -1,6 +1,6 @@
 def runSecretsScan() {
     stage('🔑 Secrets Scan — Gitleaks') {
-            steps {
+
                 echo '🔑 Détection de secrets dans le code...'
                 sh """
                     docker run --rm \
@@ -25,7 +25,7 @@ def runSecretsScan() {
                                      allowEmptyArchive: true
                 }
             }
-        }
+        
 }
 
 return this

@@ -22,3 +22,5 @@ def runBuildAndScan() {
         archiveArtifacts artifacts: 'bandit-report.json', allowEmptyArchive: true
     }
 }
+
+return this

@@ -456,34 +456,55 @@ def generate_html_email(analysis: dict, build_info: dict) -> str:
 def send_email_resend(api_key, to, subject, html, attachments):
     import base64
     attach_payload = []
+    
     for att in attachments:
         path = Path(att["path"])
-        if path.exists():
-            content = base64.b64encode(path.read_bytes()).decode()
-            attach_payload.append({"filename": att["name"], "content": content})
+        # On vérifie si le fichier existe ET n'est pas vide
+        if path.exists() and path.stat().st_size > 0:
+            try:
+                content = base64.b64encode(path.read_bytes()).decode()
+                attach_payload.append({
+                    "filename": att["name"], 
+                    "content": content
+                })
+                print(f"📎 Pièce jointe ajoutée : {att['name']}")
+            except Exception as e:
+                print(f"⚠️ Impossible de lire {att['name']}: {e}")
+        else:
+            print(f"⚠️ Fichier ignoré (absent ou vide) : {att['name']}")
 
     payload = {
         "from": "DevSecOps Pipeline <onboarding@resend.dev>",
         "to": [to],
         "subject": subject,
-        "html": html,
-        "attachments": attach_payload
+        "html": html
     }
 
-    print(f"📡 Tentative d'envoi à {to}...")
-    response = requests.post(
-        "https://api.resend.com/emails",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json=payload
-    )
+    # On n'ajoute la clé attachments QUE si on a des fichiers valides
+    if attach_payload:
+        payload["attachments"] = attach_payload
 
-    # C'EST ICI QUE CA DEVIENT UTILE :
-    if response.status_code != 200 and response.status_code != 201:
-        print(f"❌ ERREUR RESEND : {response.text}") # <--- L'ERREUR S'AFFICHERA ICI
+    print(f"📡 Tentative d'envoi à {to}...")
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}", 
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=30
+        )
+
+        if response.status_code in [200, 201]:
+            print(f"✅ Email envoyé ! ID: {response.json().get('id')}")
+            return True
+        else:
+            print(f"❌ ERREUR RESEND ({response.status_code}) : {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Erreur réseau lors de l'envoi : {e}")
         return False
-    
-    print(f"✅ Email envoyé ! ID: {response.json().get('id')}")
-    return True
 
 
 def main():

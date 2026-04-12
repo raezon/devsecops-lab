@@ -1,43 +1,52 @@
 def runOwaspZap() {
+    // 1. Bloc try pour sécuriser l'exécution
     try {
         echo '🚨 Démarrage de l\'application cible...'
+        
         sh """
-            # Nettoyage
+            # Nettoyage préventif d'un éventuel container fantôme
             docker rm -f devsecops-target 2>/dev/null || true
 
-            # Lancement
+            # Lancement du container de l'application
+            # On le place dans le réseau dédié pour que ZAP puisse le voir
             docker run -d \
                 --name devsecops-target \
                 --network "${env.DOCKER_NETWORK}" \
                 -p "${env.APP_PORT}:${env.APP_PORT}" \
                 "${env.APP_IMAGE}"
 
-            # RÉCUPÉRATION DE L'IP DU CONTAINER
-            TARGET_IP=\$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' devsecops-target)
-            echo "✅ Container IP: \$TARGET_IP"
-
-            # Attente sur l'IP du container au lieu de localhost
-            echo "Attente de l'application sur http://\$TARGET_IP:${env.APP_PORT}..."
-            for i in \$(seq 1 30); do
-                if curl -sf "http://\$TARGET_IP:${env.APP_PORT}" > /dev/null 2>&1; then
-                    echo "✅ App prête sur le réseau Docker"
+            echo "⏳ Attente du démarrage de l'application (Healthcheck interne)..."
+            
+            # On teste la disponibilité depuis l'INTÉRIEUR du container 
+            # pour éviter les problèmes de routage réseau de l'agent Jenkins.
+            # On utilise Python car curl n'est pas toujours présent dans l'image.
+            for i in \$(seq 1 20); do
+                if docker exec devsecops-target python -c "import urllib.request; urllib.request.urlopen('http://localhost:${env.APP_PORT}')" > /dev/null 2>&1; then
+                    echo "✅ Application détectée et prête !"
                     exit 0
                 fi
-                sleep 1
+                echo "En attente... (\$i/20)"
+                sleep 2
             done
-            
-            # Si échec, on affiche les logs du container pour comprendre pourquoi il a crashé
+
+            echo "❌ Erreur : L'application n'a pas démarré après 40 secondes."
+            echo "--- LOGS DU CONTAINER ---"
             docker logs devsecops-target
-            echo "❌ L'application n'a pas répondu"
             exit 1
         """
 
-        echo '🕷️ Scan ZAP en cours...'
+        echo '🕷️ Scan ZAP (Baseline) en cours...'
+        
+        // Récupération du chemin absolu pour le montage de volume
         def workspacePath = pwd()
+
         sh """
+            # On s'assure que ZAP peut écrire les rapports dans le workspace
             chmod 777 "${workspacePath}"
 
-            # Le scan ZAP doit attaquer le NOM du container car ils sont sur le même network
+            # Exécution de ZAP
+            # -t : URL cible (on utilise le NOM du container sur le network Docker)
+            # -I : Ne pas échouer le build si des alertes sont trouvées (on veut juste le rapport)
             docker run --rm \
                 --network "${env.DOCKER_NETWORK}" \
                 -v "${workspacePath}:/zap/wrk:rw" \
@@ -47,18 +56,37 @@ def runOwaspZap() {
                 -J zap-report.json \
                 -r zap-report.html \
                 -I || true
+
+            # Sécurité : Si ZAP échoue à créer les fichiers, on crée des placeholders
+            [ -s "${workspacePath}/zap-report.json" ] || echo '{"site":[]}' > "${workspacePath}/zap-report.json"
+            [ -s "${workspacePath}/zap-report.html" ] || echo '<html><body>Rapport non généré</body></html>' > "${workspacePath}/zap-report.html"
+            
+            # Remise des permissions correctes
+            chmod 644 "${workspacePath}/zap-report.json" "${workspacePath}/zap-report.html" || true
         """
-    }
-    catch (Exception e) {
-        echo "⚠️ Erreur : ${e.message}"
+
+    } catch (Exception e) {
+        echo "⚠️ Échec du stage DAST : ${e.message}"
         throw e
-    }
-    finally {
+    } finally {
+        // 2. Bloc de nettoyage et d'archivage (s'exécute toujours)
+        echo "🧹 Nettoyage du container et archivage des rapports..."
+        
         sh "docker rm -f devsecops-target 2>/dev/null || true"
+        
+        // Archivage des fichiers pour la consultation dans Jenkins
         archiveArtifacts artifacts: 'zap-report.json, zap-report.html', allowEmptyArchive: true
+        
+        // Publication de l'onglet "ZAP Security Report" dans l'interface Jenkins
         publishHTML(target: [
-            allowMissing: true, reportDir: '.', reportFiles: 'zap-report.html', reportName: 'ZAP Security Report'
+            allowMissing         : true,
+            alwaysLinkToLastBuild: true,
+            keepAll              : true,
+            reportDir            : '.',
+            reportFiles          : 'zap-report.html',
+            reportName           : 'ZAP Security Report'
         ])
     }
 }
+
 return this

@@ -23,7 +23,7 @@ def runAiReports() {
                     -e GIT_BRANCH="${env.GIT_BRANCH}" \
                     ${env.PYTHON_IMAGE} /bin/sh -c '
                         pip install -q requests &&
-                        python3 scripts/ai_security_report.py
+                        python3 jenkins/scripts/ai_security_report.py
                     '
             """
         }

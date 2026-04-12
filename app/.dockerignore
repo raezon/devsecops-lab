@@ -1,0 +1,24 @@
+# Git metadata (can be huge)
+.git
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Build and CI artifacts
+bandit-report.json
+.dockerignore
+Dockerfile
+jenkins/
+
+# Local database files
+*.sqlite3
+
+# OS generated files
+.DS_Store

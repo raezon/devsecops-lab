@@ -1,34 +1,24 @@
 def runBuildAndScan() {
-    // 1. On ouvre le try (obligatoire pour avoir un finally)
     try {
-        echo '🔍 1. Exécution du SAST (Bandit)...'
-        sh """
-            docker run --rm \
-                -v "${env.WORKSPACE}:/app" \
-                -w /app \
-                ${env.PYTHON_IMAGE} /bin/sh -c '
-                    pip install -q bandit &&
-                    bandit -r app/ -f json -o bandit-report.json || true
-                '
-            [ -s "${env.WORKSPACE}/bandit-report.json" ] || \
-                echo '{"results":[],"metrics":{}}' > "${env.WORKSPACE}/bandit-report.json"
-        """
-
-        echo "🐳 2. Construction de l'image Docker : ${env.APP_IMAGE}"
+        // Build ONCE - This becomes your environment for everything
+        echo "🐳 Building Image..."
         sh "docker build -t ${env.APP_IMAGE} app/"
 
-        echo '🧪 3. Exécution des Tests Unitaires...'
+        // Run Bandit using the already built image (if it has python)
+        // or a pre-baked security image to avoid 'pip install'
+        echo '🔍 1. Running SAST...'
         sh """
-            docker run --rm ${env.APP_IMAGE} /bin/sh -c \
-                'pip install -q pytest && pytest tests/ -v 2>&1 || echo "⚠️  Aucun test trouvé"' || true
+            docker run --rm -v "${env.WORKSPACE}:/app" my-prebaked-security-image \
+            bandit -r /app -f json -o /app/bandit-report.json || true
         """
-    } 
-    // 2. On ferme le try et on ouvre le finally (équivalent du post always)
-    finally {
-        echo "📦 Archivage et Stash du rapport Bandit..."
+
+        echo '🧪 2. Running Unit Tests...'
+        // The image already has your code, just run the tests
+        sh "docker run --rm ${env.APP_IMAGE} pytest tests/ -v || echo 'No tests found'"
+
+    } finally {
+        echo "📦 Archiving..."
         stash includes: 'bandit-report.json', name: 'bandit-report', allowEmpty: true
         archiveArtifacts artifacts: 'bandit-report.json', allowEmptyArchive: true
     }
 }
-
-return this
